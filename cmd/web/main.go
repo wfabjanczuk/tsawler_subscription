@@ -1,65 +1,30 @@
 package main
 
 import (
-	"database/sql"
-	"log"
-	"os"
-	"time"
-
+	"fmt"
 	_ "github.com/jackc/pgconn"
 	_ "github.com/jackc/pgx/v4"
 	_ "github.com/jackc/pgx/v4/stdlib"
+	"net/http"
 )
 
 const port = "80"
 
 func main() {
-	db := initDB()
-
-	if err := db.Ping(); err != nil {
-		log.Println(err)
-	}
+	app := initApp()
+	app.serve()
 }
 
-func initDB() *sql.DB {
-	conn := connectToDB()
-	if conn == nil {
-		log.Panicln("cannot connect to database")
+func (a *App) serve() {
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%s", port),
+		Handler: a.routes(),
 	}
 
-	return conn
-}
+	a.InfoLog.Println("Starting web server...")
+	err := server.ListenAndServe()
 
-func connectToDB() *sql.DB {
-	dsn := os.Getenv("DSN")
-	retryingDelay := 1 * time.Second
-	maxRetries := 10
-
-	for i := 0; i < maxRetries; i++ {
-		connection, err := openDB(dsn)
-		if err != nil {
-			log.Printf("retry #%d: postgres not yet ready...", i)
-		} else {
-			log.Printf("retry #%d: connected to database", i)
-			return connection
-		}
-
-		time.Sleep(retryingDelay)
-	}
-
-	return nil
-}
-
-func openDB(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		return nil, err
+		a.ErrorLog.Panic(err)
 	}
-
-	err = db.Ping()
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
 }
