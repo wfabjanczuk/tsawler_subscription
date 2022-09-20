@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: concurrency
     volumes:
-      - ./db-data/postgres/:/var/lib/postgresql/data/
+      - ./db-models/postgres/:/var/lib/postgresql/models/
 
   tsawler_subscription_redis:
     image: 'redis:alpine'
@@ -19,7 +19,7 @@ services:
       - "6379:6379"
     restart: always
     volumes:
-      - ./db-data/redis/:/data
+      - ./db-models/redis/:/models
 
   tsawler_subscription_mailhog:
     image: 'mailhog/mailhog:latest'

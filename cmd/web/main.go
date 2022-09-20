@@ -8,5 +8,6 @@ import (
 
 func main() {
 	app := initApp()
+	go app.listenForShutdown()
 	app.serve()
 }

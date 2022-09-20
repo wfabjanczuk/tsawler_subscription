@@ -11,9 +11,60 @@ func (a *App) LoginPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) PostLoginPage(w http.ResponseWriter, r *http.Request) {
+	err := a.Session.RenewToken(r.Context())
+	if err != nil {
+		a.ErrorLog.Println(err)
+	}
+
+	err = r.ParseForm()
+	if err != nil {
+		a.ErrorLog.Println(err)
+	}
+
+	email := r.Form.Get("email")
+	password := r.Form.Get("password")
+
+	user, err := a.Models.User.GetByEmail(email)
+	if err != nil {
+		a.ErrorLog.Println(err)
+		a.Session.Put(r.Context(), "error", "Invalid credentials.")
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	validPassword, err := user.PasswordMatches(password)
+	if err != nil {
+		a.ErrorLog.Println(err)
+		a.Session.Put(r.Context(), "error", "Invalid credentials.")
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	if !validPassword {
+		a.Session.Put(r.Context(), "error", "Invalid credentials.")
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	a.Session.Put(r.Context(), "userID", user.ID)
+	a.Session.Put(r.Context(), "user", user)
+	a.Session.Put(r.Context(), "flash", "Successful login!")
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (a *App) Logout(w http.ResponseWriter, r *http.Request) {
+	err := a.Session.Destroy(r.Context())
+	if err != nil {
+		a.ErrorLog.Println(err)
+	}
+
+	err = a.Session.RenewToken(r.Context())
+	if err != nil {
+		a.ErrorLog.Println(err)
+	}
+
+	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
 func (a *App) RegisterPage(w http.ResponseWriter, r *http.Request) {

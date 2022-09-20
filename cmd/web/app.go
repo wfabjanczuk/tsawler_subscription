@@ -2,14 +2,18 @@ package main
 
 import (
 	"database/sql"
+	"encoding/gob"
 	"fmt"
 	"github.com/alexedwards/scs/redisstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/gomodule/redigo/redis"
+	"github.com/wfabjanczuk/tsawler_subscription/cmd/web/models"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -18,6 +22,7 @@ const port = "80"
 type App struct {
 	DB        *sql.DB
 	Session   *scs.SessionManager
+	Models    *models.Models
 	InfoLog   *log.Logger
 	ErrorLog  *log.Logger
 	WaitGroup *sync.WaitGroup
@@ -38,9 +43,12 @@ func (a *App) serve() {
 }
 
 func initApp() *App {
+	db := initDB()
+
 	return &App{
-		DB:        initDB(),
+		DB:        db,
 		Session:   initSession(),
+		Models:    models.New(db),
 		InfoLog:   log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime),
 		ErrorLog:  log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile),
 		WaitGroup: &sync.WaitGroup{},
@@ -92,6 +100,8 @@ func openDB(dsn string) (*sql.DB, error) {
 }
 
 func initSession() *scs.SessionManager {
+	gob.Register(models.User{})
+
 	session := scs.New()
 	session.Store = redisstore.New(initRedis())
 	session.Lifetime = 24 * time.Hour
@@ -109,4 +119,20 @@ func initRedis() *redis.Pool {
 			return redis.Dial("tcp", os.Getenv("REDIS"))
 		},
 	}
+}
+
+func (a *App) listenForShutdown() {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	a.shutdown()
+	os.Exit(0)
+}
+
+func (a *App) shutdown() {
+	a.InfoLog.Println("running cleanup tasks...")
+	a.WaitGroup.Wait()
+
+	a.InfoLog.Println("closing channels and shutting down...")
 }
