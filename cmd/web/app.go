@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/alexedwards/scs/redisstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/gomodule/redigo/redis"
@@ -12,12 +13,28 @@ import (
 	"time"
 )
 
+const port = "80"
+
 type App struct {
 	DB        *sql.DB
 	Session   *scs.SessionManager
 	InfoLog   *log.Logger
 	ErrorLog  *log.Logger
 	WaitGroup *sync.WaitGroup
+}
+
+func (a *App) serve() {
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%s", port),
+		Handler: a.routes(),
+	}
+
+	a.InfoLog.Println("Starting web server...")
+	err := server.ListenAndServe()
+
+	if err != nil {
+		a.ErrorLog.Panic(err)
+	}
 }
 
 func initApp() *App {
