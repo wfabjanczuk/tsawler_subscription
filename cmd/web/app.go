@@ -20,13 +20,15 @@ import (
 const port = "80"
 
 type App struct {
-	DB        *sql.DB
-	Session   *scs.SessionManager
-	Models    *models.Models
-	InfoLog   *log.Logger
-	ErrorLog  *log.Logger
-	WaitGroup *sync.WaitGroup
-	Mailer    *Mail
+	DB            *sql.DB
+	Session       *scs.SessionManager
+	Models        *models.Models
+	InfoLog       *log.Logger
+	ErrorLog      *log.Logger
+	WaitGroup     *sync.WaitGroup
+	Mailer        *Mail
+	ErrorChan     chan error
+	ErrorChanDone chan bool
 }
 
 func (a *App) serve() {
@@ -48,13 +50,15 @@ func initApp() *App {
 	wg := &sync.WaitGroup{}
 
 	return &App{
-		DB:        db,
-		Session:   initSession(),
-		Models:    models.New(db),
-		InfoLog:   log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime),
-		ErrorLog:  log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile),
-		Mailer:    createMail(wg),
-		WaitGroup: wg,
+		DB:            db,
+		Session:       initSession(),
+		Models:        models.New(db),
+		InfoLog:       log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime),
+		ErrorLog:      log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile),
+		Mailer:        createMail(wg),
+		WaitGroup:     wg,
+		ErrorChan:     make(chan error),
+		ErrorChanDone: make(chan bool),
 	}
 }
 
@@ -143,6 +147,17 @@ func createMail(wg *sync.WaitGroup) *Mail {
 	}
 }
 
+func (a *App) listenForErrors() {
+	for {
+		select {
+		case err := <-a.ErrorChan:
+			a.ErrorLog.Println(err)
+		case <-a.ErrorChanDone:
+			return
+		}
+	}
+}
+
 func (a *App) listenForShutdown() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -160,6 +175,8 @@ func (a *App) shutdown() {
 	close(a.Mailer.ErrorChan)
 	close(a.Mailer.MailerChan)
 	close(a.Mailer.DoneChan)
+	close(a.ErrorChan)
+	close(a.ErrorChanDone)
 
 	a.InfoLog.Println("closing channels and shutting down...")
 }

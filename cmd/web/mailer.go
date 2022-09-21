@@ -26,14 +26,15 @@ type Mail struct {
 }
 
 type Message struct {
-	FromAddress string
-	FromName    string
-	ToAddress   string
-	Subject     string
-	Attachments []string
-	Data        interface{}
-	DataMap     map[string]interface{}
-	Template    string
+	FromAddress    string
+	FromName       string
+	ToAddress      string
+	Subject        string
+	Attachments    []string
+	AttachmentsMap map[string]string
+	Data           interface{}
+	DataMap        map[string]interface{}
+	Template       string
 }
 
 func (a *App) listenForMail() {
@@ -64,8 +65,10 @@ func (m *Mail) SendMail(msg Message, errorChan chan error) {
 		msg.FromName = m.FromName
 	}
 
-	msg.DataMap = map[string]interface{}{
-		"message": msg.Data,
+	if len(msg.DataMap) == 0 {
+		msg.DataMap = map[string]interface{}{
+			"message": msg.Data,
+		}
 	}
 
 	formattedMessage, err := m.buildHTMLMessage(msg)
@@ -103,6 +106,12 @@ func (m *Mail) SendMail(msg Message, errorChan chan error) {
 	if len(msg.Attachments) > 0 {
 		for _, attachment := range msg.Attachments {
 			email.AddAttachment(attachment)
+		}
+	}
+
+	if len(msg.AttachmentsMap) > 0 {
+		for key, value := range msg.AttachmentsMap {
+			email.AddAttachment(value, key)
 		}
 	}
 

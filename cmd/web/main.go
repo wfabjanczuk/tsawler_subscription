@@ -9,6 +9,7 @@ import (
 func main() {
 	app := initApp()
 	go app.listenForMail()
+	go app.listenForErrors()
 	go app.listenForShutdown()
 	app.serve()
 }

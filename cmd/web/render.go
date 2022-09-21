@@ -72,7 +72,6 @@ func (a *App) AddDefaultData(data *TemplateData, r *http.Request) *TemplateData 
 	}
 
 	data.Now = time.Now()
-
 	return data
 }
 
