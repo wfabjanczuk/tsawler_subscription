@@ -16,7 +16,7 @@ func (a *App) routes() http.Handler {
 	mux.Get("/logout", a.Logout)
 	mux.Get("/register", a.RegisterPage)
 	mux.Post("/register", a.PostRegisterPage)
-	mux.Get("/activate-account", a.ActivateAccount)
+	mux.Get("/activate", a.ActivateAccount)
 
 	return mux
 }
