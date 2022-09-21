@@ -36,7 +36,22 @@ type Message struct {
 	Template    string
 }
 
+func (a *App) listenForMail() {
+	for {
+		select {
+		case msg := <-a.Mailer.MailerChan:
+			go a.Mailer.SendMail(msg, a.Mailer.ErrorChan)
+		case err := <-a.Mailer.ErrorChan:
+			a.ErrorLog.Println(err)
+		case <-a.Mailer.DoneChan:
+			return
+		}
+	}
+}
+
 func (m *Mail) SendMail(msg Message, errorChan chan error) {
+	defer m.WaitGroup.Done()
+
 	if msg.Template == "" {
 		msg.Template = "mail"
 	}
@@ -56,11 +71,13 @@ func (m *Mail) SendMail(msg Message, errorChan chan error) {
 	formattedMessage, err := m.buildHTMLMessage(msg)
 	if err != nil {
 		errorChan <- err
+		return
 	}
 
 	plainMessage, err := m.buildPlainTextMessage(msg)
 	if err != nil {
 		errorChan <- err
+		return
 	}
 
 	server := mail.NewSMTPClient()

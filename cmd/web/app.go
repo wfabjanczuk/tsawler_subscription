@@ -26,6 +26,7 @@ type App struct {
 	InfoLog   *log.Logger
 	ErrorLog  *log.Logger
 	WaitGroup *sync.WaitGroup
+	Mailer    *Mail
 }
 
 func (a *App) serve() {
@@ -44,6 +45,7 @@ func (a *App) serve() {
 
 func initApp() *App {
 	db := initDB()
+	wg := &sync.WaitGroup{}
 
 	return &App{
 		DB:        db,
@@ -51,7 +53,8 @@ func initApp() *App {
 		Models:    models.New(db),
 		InfoLog:   log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime),
 		ErrorLog:  log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile),
-		WaitGroup: &sync.WaitGroup{},
+		Mailer:    createMail(wg),
+		WaitGroup: wg,
 	}
 }
 
@@ -121,6 +124,25 @@ func initRedis() *redis.Pool {
 	}
 }
 
+func createMail(wg *sync.WaitGroup) *Mail {
+	errorChan := make(chan error)
+	mailerChan := make(chan Message, 100)
+	mailerDoneChan := make(chan bool)
+
+	return &Mail{
+		Domain:      "localhost",
+		Host:        "localhost",
+		Port:        1025,
+		FromName:    "Info",
+		FromAddress: "info@mycompany.com",
+		Encryption:  "none",
+		ErrorChan:   errorChan,
+		MailerChan:  mailerChan,
+		DoneChan:    mailerDoneChan,
+		WaitGroup:   wg,
+	}
+}
+
 func (a *App) listenForShutdown() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -133,6 +155,11 @@ func (a *App) listenForShutdown() {
 func (a *App) shutdown() {
 	a.InfoLog.Println("running cleanup tasks...")
 	a.WaitGroup.Wait()
+	a.Mailer.DoneChan <- true
+
+	close(a.Mailer.ErrorChan)
+	close(a.Mailer.MailerChan)
+	close(a.Mailer.DoneChan)
 
 	a.InfoLog.Println("closing channels and shutting down...")
 }

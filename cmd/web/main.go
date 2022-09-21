@@ -8,6 +8,7 @@ import (
 
 func main() {
 	app := initApp()
+	go app.listenForMail()
 	go app.listenForShutdown()
 	app.serve()
 }
