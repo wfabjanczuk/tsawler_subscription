@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/wfabjanczuk/tsawler_subscription/cmd/web/models"
 	"html/template"
 	"net/http"
 	"time"
@@ -28,7 +29,7 @@ type TemplateData struct {
 	Error         string
 	Now           time.Time
 	Authenticated bool
-	//User            *model.User
+	User          *models.User
 }
 
 func (a *App) render(w http.ResponseWriter, r *http.Request, name string, data *TemplateData) {
@@ -60,6 +61,16 @@ func (a *App) AddDefaultData(data *TemplateData, r *http.Request) *TemplateData 
 	data.Warning = a.Session.PopString(r.Context(), "warning")
 	data.Error = a.Session.PopString(r.Context(), "error")
 	data.Authenticated = a.IsAuthenticated(r)
+
+	if data.Authenticated {
+		user, ok := a.Session.Get(r.Context(), "user").(models.User)
+		if !ok {
+			a.ErrorLog.Println("cannot get user from session")
+		} else {
+			data.User = &user
+		}
+	}
+
 	data.Now = time.Now()
 
 	return data
