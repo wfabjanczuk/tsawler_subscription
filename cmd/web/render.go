@@ -10,13 +10,6 @@ import (
 
 var (
 	pathToTemplates = "./cmd/web/templates"
-	partials        = []string{
-		fmt.Sprintf("%s/base.layout.gohtml", pathToTemplates),
-		fmt.Sprintf("%s/header.partial.gohtml", pathToTemplates),
-		fmt.Sprintf("%s/navbar.partial.gohtml", pathToTemplates),
-		fmt.Sprintf("%s/footer.partial.gohtml", pathToTemplates),
-		fmt.Sprintf("%s/alerts.partial.gohtml", pathToTemplates),
-	}
 )
 
 type TemplateData struct {
@@ -33,15 +26,26 @@ type TemplateData struct {
 }
 
 func (a *App) render(w http.ResponseWriter, r *http.Request, name string, data *TemplateData) {
-	var fileTemplates []string
-	fileTemplates = append(fileTemplates, fmt.Sprintf("%s/%s", pathToTemplates, name))
-	fileTemplates = append(fileTemplates, partials...)
+	partials := []string{
+		fmt.Sprintf("%s/base.layout.gohtml", pathToTemplates),
+		fmt.Sprintf("%s/header.partial.gohtml", pathToTemplates),
+		fmt.Sprintf("%s/navbar.partial.gohtml", pathToTemplates),
+		fmt.Sprintf("%s/footer.partial.gohtml", pathToTemplates),
+		fmt.Sprintf("%s/alerts.partial.gohtml", pathToTemplates),
+	}
+
+	var templateSlice []string
+	templateSlice = append(templateSlice, fmt.Sprintf("%s/%s", pathToTemplates, name))
+
+	for _, x := range partials {
+		templateSlice = append(templateSlice, x)
+	}
 
 	if data == nil {
 		data = &TemplateData{}
 	}
 
-	parsedTemplate, err := template.ParseFiles(fileTemplates...)
+	parsedTemplate, err := template.ParseFiles(templateSlice...)
 	if err != nil {
 		a.ErrorLog.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
