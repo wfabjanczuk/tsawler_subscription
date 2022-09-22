@@ -47,7 +47,7 @@ func TestApp_IsAuthenticated(t *testing.T) {
 	}
 }
 
-func TestConfig_render(t *testing.T) {
+func TestApp_render(t *testing.T) {
 	pathToTemplates = "./templates"
 
 	rr := httptest.NewRecorder()

@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+var (
+	pathToManual = "./pdf"
+	pathToTmp    = "./tmp"
+)
+
 func (a *App) HomePage(w http.ResponseWriter, r *http.Request) {
 	a.render(w, r, "home.page.gohtml", nil)
 }
@@ -246,7 +251,7 @@ func (a *App) sendManual(user models.User, plan *models.Plan) {
 	go func() {
 		defer a.WaitGroup.Done()
 
-		filename := fmt.Sprintf("./tmp/%d_manual.pdf", user.ID)
+		filename := fmt.Sprintf("%s/%d_manual.pdf", pathToTmp, user.ID)
 		pdf := a.generateManual(user, plan)
 		err := pdf.OutputFileAndClose(filename)
 		if err != nil {
@@ -272,7 +277,8 @@ func (a *App) generateManual(user models.User, plan *models.Plan) *gofpdf.Fpdf {
 
 	time.Sleep(6 * time.Second)
 	importer := gofpdi.NewImporter()
-	t := importer.ImportPage(pdf, "./pdf/manual.pdf", 1, "/MediaBox")
+	filename := fmt.Sprintf("%s/manual.pdf", pathToManual)
+	t := importer.ImportPage(pdf, filename, 1, "/MediaBox")
 	pdf.AddPage()
 
 	importer.UseImportedTemplate(pdf, t, 0, 0, 215.9, 0)

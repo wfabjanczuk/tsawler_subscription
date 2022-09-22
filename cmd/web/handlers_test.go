@@ -43,8 +43,6 @@ var pageTests = []struct {
 }
 
 func TestApp_Pages(t *testing.T) {
-	pathToTemplates = "./templates"
-
 	for _, pageTest := range pageTests {
 		rr := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", pageTest.url, nil)
@@ -73,8 +71,6 @@ func TestApp_Pages(t *testing.T) {
 }
 
 func TestApp_PostLoginPage(t *testing.T) {
-	pathToTemplates = "./templates"
-
 	formData := url.Values{
 		"email":    {"admin@example.com"},
 		"password": {"password"},
@@ -94,5 +90,30 @@ func TestApp_PostLoginPage(t *testing.T) {
 
 	if !testApp.Session.Exists(ctx, "userID") {
 		t.Errorf("Page test %q failed: unable to find userID in session", "PostLogin")
+	}
+}
+
+func TestApp_SubscribeToPlan(t *testing.T) {
+	rr := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/members/subscribe?id=1", nil)
+	ctx := getCtx(req)
+	req = req.WithContext(ctx)
+
+	testApp.Session.Put(ctx, "userID", 1)
+	testApp.Session.Put(ctx, "user", models.User{
+		ID:        1,
+		Email:     "admin@example.com",
+		FirstName: "Admin",
+		LastName:  "User",
+		Active:    1,
+	})
+
+	handler := http.HandlerFunc(testApp.SubscribeToPlan)
+	handler.ServeHTTP(rr, req)
+
+	testApp.WaitGroup.Wait()
+
+	if rr.Code != http.StatusSeeOther {
+		t.Errorf("Page test %q failed: expected %d but got %d", "SubscribeToPlan", http.StatusSeeOther, rr.Code)
 	}
 }
