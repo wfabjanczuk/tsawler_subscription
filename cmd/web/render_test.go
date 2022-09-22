@@ -58,7 +58,7 @@ func TestConfig_render(t *testing.T) {
 
 	testApp.render(rr, req, "home.page.gohtml", &TemplateData{})
 
-	if rr.Code != 200 {
+	if rr.Code != http.StatusOK {
 		t.Error("failed to render page")
 	}
 }

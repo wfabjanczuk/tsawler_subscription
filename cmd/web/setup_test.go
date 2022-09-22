@@ -27,6 +27,7 @@ func TestMain(m *testing.M) {
 	testApp = App{
 		DB:            nil,
 		Session:       session,
+		Models:        models.TestNew(nil),
 		InfoLog:       log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime),
 		ErrorLog:      log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile),
 		WaitGroup:     &sync.WaitGroup{},
